@@ -29,31 +29,34 @@
             skip_invisible  : false,
             appear          : null,
             load            : null,
-            placeholder     : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC"
+            placeholder     : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC",
+            wrapHandler: function (handler) { return handler }
         };
 
         function update() {
-            var counter = 0;
+            setTimeout(function(){
+                var counter = 0;
 
-            elements.each(function() {
-                var $this = $(this);
-                if (settings.skip_invisible && !$this.is(":visible")) {
-                    return;
-                }
-                if ($.abovethetop(this, settings) ||
-                    $.leftofbegin(this, settings)) {
-                        /* Nothing. */
-                } else if (!$.belowthefold(this, settings) &&
-                    !$.rightoffold(this, settings)) {
-                        $this.trigger("appear");
-                        /* if we found an image we'll load, reset the counter */
-                        counter = 0;
-                } else {
-                    if (++counter > settings.failure_limit) {
-                        return false;
+                elements.each(function() {
+                    var $this = $(this);
+                    if (settings.skip_invisible && !$this.is(":visible")) {
+                        return;
                     }
-                }
-            });
+                    if ($.abovethetop(this, settings) ||
+                        $.leftofbegin(this, settings)) {
+                            /* Nothing. */
+                    } else if (!$.belowthefold(this, settings) &&
+                        !$.rightoffold(this, settings)) {
+                            $this.trigger("appear");
+                            /* if we found an image we'll load, reset the counter */
+                            counter = 0;
+                    } else {
+                        if (++counter > settings.failure_limit) {
+                            return false;
+                        }
+                    }
+                });
+            }, 0)
 
         }
 
@@ -77,9 +80,7 @@
 
         /* Fire one scroll event per scroll. Not one scroll event per image. */
         if (0 === settings.event.indexOf("scroll")) {
-            $container.on(settings.event, function() {
-                return update();
-            });
+            $container.bind(settings.event, settings.wrapHandler(update));
         }
 
         this.each(function() {
@@ -103,7 +104,8 @@
                         settings.appear.call(self, elements_left, settings);
                     }
                     $("<img />")
-                        .one("load", function() {
+                        .bind("load", function() {
+
                             var original = $self.attr("data-" + settings.data_attribute);
                             $self.hide();
                             if ($self.is("img")) {
@@ -133,7 +135,7 @@
             /* When wanted event is triggered load original image */
             /* by triggering appear.                              */
             if (0 !== settings.event.indexOf("scroll")) {
-                $self.on(settings.event, function() {
+                $self.bind(settings.event, function() {
                     if (!self.loaded) {
                         $self.trigger("appear");
                     }
@@ -142,14 +144,14 @@
         });
 
         /* Check if something appears when window is resized. */
-        $window.on("resize", function() {
+        $window.bind("resize", function() {
             update();
         });
 
         /* With IOS5 force loading images when navigating with back button. */
         /* Non optimal workaround. */
         if ((/(?:iphone|ipod|ipad).*os 5/gi).test(navigator.appVersion)) {
-            $window.on("pageshow", function(event) {
+            $window.bind("pageshow", function(event) {
                 if (event.originalEvent && event.originalEvent.persisted) {
                     elements.each(function() {
                         $(this).trigger("appear");
